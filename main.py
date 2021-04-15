@@ -1,7 +1,7 @@
 import time
-import schedule
 import logging
-from telegram.ext import Updater, CommandHandler
+from bot import Bot
+from database import Database
 
 import utils
 
@@ -11,25 +11,16 @@ logging.basicConfig(
 )
 
 config = utils.get_config("config.json")
-TOKEN = config["get_token"]
-
-
-def start(update, context):
-    context.bot.send_message(chat_id=update.effective_chat.id, text="Henlo, me is a bot, please talk to me!")
-
-
-def job():
-    logging.log(logging.INFO, "Hello")
+TOKEN = config["bot_token"]
+DB_FILE = config["database_file"]
 
 
 def main():
-    updater = Updater(token=TOKEN, use_context=True)
-    updater.dispatcher.add_handler(CommandHandler('start', start))
-    updater.start_polling()
+    Database.prepare_db(DB_FILE)
+    bot = Bot(TOKEN, DB_FILE)
+    bot.start()
 
-    schedule.every(10).seconds.do(job)
     while True:
-        schedule.run_pending()
         time.sleep(1)
 
 

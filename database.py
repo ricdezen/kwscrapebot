@@ -2,8 +2,9 @@ import logging
 import sqlite3
 
 from dataclasses import dataclass
-
 from typing import List, Optional
+
+from scrape import Link
 
 
 @dataclass(repr=True)
@@ -14,7 +15,7 @@ class Job(object):
     """
     user: int
     url: str
-    freq: str
+    freq: int
     keywords: List[str] = None
 
     def __post_init__(self):
@@ -53,6 +54,12 @@ class Database(object):
         FOREIGN KEY (user) REFERENCES users(id),
         PRIMARY KEY (user, url)
     );
+    CREATE TABLE links (
+        url text NOT NULL,
+        href text NOT NULL,
+        body text NOT NULL,
+        PRIMARY KEY (url, href, body)
+    );
     ```
     """
 
@@ -66,23 +73,6 @@ class Database(object):
         self._conn = sqlite3.connect(filename)
 
         with self._conn as c:
-            # Create user table.
-            try:
-                c.execute("CREATE TABLE users (id integer PRIMARY KEY);")
-            except sqlite3.OperationalError:
-                logging.warning(Database._TABLE_EXISTS.format("users"))
-            # Create job table.
-            try:
-                c.execute("""CREATE TABLE jobs (
-                    user integer NOT NULL,
-                    url text NOT NULL,
-                    freq integer NOT NULL,
-                    keywords text,
-                    FOREIGN KEY (user) REFERENCES users(id),
-                    PRIMARY KEY (user, url)
-                );""")
-            except sqlite3.OperationalError:
-                logging.warning(Database._TABLE_EXISTS.format("jobs"))
             # Ensure foreign keys are enabled.
             c.execute("PRAGMA foreign_keys = ON;")
 
@@ -93,7 +83,13 @@ class Database(object):
         :param new_user: Id for the new user to add.
         """
         with self._conn as c:
-            c.execute("INSERT OR IGNORE INTO users(id) values (?);", (new_user,))
+            c.execute("INSERT OR IGNORE INTO users(id) VALUES (?);", (new_user,))
+
+    def get_users(self) -> List[int]:
+        """
+        :return: The list of ids for the users.
+        """
+        return [r[0] for r in self._conn.execute("SELECT * FROM users;")]
 
     def add_job(self, job: Job):
         """
@@ -103,7 +99,7 @@ class Database(object):
         """
         with self._conn as c:
             c.execute(
-                "INSERT OR REPLACE INTO jobs(user, url, freq, keywords) values (?, ?, ?, ?);",
+                "INSERT OR REPLACE INTO jobs(user, url, freq, keywords) VALUES (?, ?, ?, ?);",
                 (job.user, job.url, job.freq, job.kw_string)
             )
 
@@ -119,10 +115,98 @@ class Database(object):
                 "SELECT * FROM jobs WHERE jobs.user = ?;", (user,)
             )]
 
+    def delete_job(self, job: Job):
+        """
+        Delete the given job.
+
+        :param job: The job to remove.
+        """
+        with self._conn as c:
+            c.execute("DELETE FROM jobs WHERE user = ? AND url = ?;", (job.user, job.url))
+
+    def add_link(self, url: str, link: Link):
+        """
+        Add a link to the database.
+
+        :param url: The url of the page hosting the link.
+        :param link: The link object.
+        """
+        with self._conn as c:
+            c.execute("INSERT OR REPLACE INTO links(url, href, body) VALUES (?, ?, ?);", (url, link.href, link.text))
+
+    def add_links(self, url: str, links: List[Link]):
+        """
+        Add a set of links to the database.
+
+        :param url: The url of the page hosting the links.
+        :param links: The list of links to add.
+        """
+        with self._conn as c:
+            c.executemany(
+                "INSERT OR REPLACE INTO links(url, href, body) VALUES (?, ?, ?);",
+                [(url, link.href, link.text) for link in links]
+            )
+
+    def get_links(self, url: str = None) -> List[Link]:
+        """
+        :param url: Optional host web page. If None all links will be retrieved.
+        :return: The links hosted in `url` or all of them if `url` is None.
+        """
+        if url is None:
+            return [Link(r[1], r[2]) for r in self._conn.execute("SELECT * FROM links;")]
+        else:
+            return [Link(r[1], r[2]) for r in self._conn.execute(
+                "SELECT * FROM links WHERE links.url = ?;", (url,)
+            )]
+
+    def reset_links(self, url: str):
+        """
+        Reset the links for a given page.
+
+        :param url: The page for which to clean the links.
+        """
+        with self._conn as c:
+            c.execute("DELETE FROM links WHERE url = ?;", (url,))
+
     def __del__(self):
         # Close the connection when object is deleted.
         self._conn.close()
 
+    @staticmethod
+    def prepare_db(filename: str):
+        """
+        Prepares a database file with the appropriate schema by creating the necessary tables. If tables with same name
+        are found they are skipped.
 
-if __name__ == "__main__":
-    Database("main.db")
+        :param filename: The filename for the db.
+        """
+        with sqlite3.connect(filename) as c:
+            # Create user table.
+            try:
+                c.execute("CREATE TABLE users (id integer PRIMARY KEY);")
+            except sqlite3.OperationalError:
+                logging.warning(Database._TABLE_EXISTS.format("users"))
+
+            # Create job table.
+            try:
+                c.execute("""CREATE TABLE jobs (
+                    user integer NOT NULL,
+                    url text NOT NULL,
+                    freq integer NOT NULL,
+                    keywords text,
+                    FOREIGN KEY (user) REFERENCES users(id),
+                    PRIMARY KEY (user, url)
+                );""")
+            except sqlite3.OperationalError:
+                logging.warning(Database._TABLE_EXISTS.format("jobs"))
+
+            # Create link table.
+            try:
+                c.execute("""CREATE TABLE links (
+                    url text NOT NULL,
+                    href text NOT NULL,
+                    body text NOT NULL,
+                    PRIMARY KEY (url, href, body)
+                );""")
+            except sqlite3.OperationalError:
+                logging.warning(Database._TABLE_EXISTS.format("links"))

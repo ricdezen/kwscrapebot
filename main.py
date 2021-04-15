@@ -1,16 +1,17 @@
 import time
 import schedule
-import log
+import logging
 from telegram.ext import Updater, CommandHandler
 
-import logging
+import utils
 
 logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO
 )
 
-TOKEN
+config = utils.get_config("config.json")
+TOKEN = config["get_token"]
 
 
 def start(update, context):
@@ -18,7 +19,7 @@ def start(update, context):
 
 
 def job():
-    log.write(log.blue("I'm working..."))
+    logging.log(logging.INFO, "Hello")
 
 
 def main():
@@ -32,6 +33,5 @@ def main():
         time.sleep(1)
 
 
-# Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     main()

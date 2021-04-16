@@ -115,14 +115,15 @@ class Database(object):
                 "SELECT * FROM jobs WHERE jobs.user = ?;", (user,)
             )]
 
-    def delete_job(self, job: Job):
+    def delete_job(self, user: int, url: str):
         """
         Delete the given job.
 
-        :param job: The job to remove.
+        :param user: The user that owns the job.
+        :param url: The url of the job.
         """
         with self._conn as c:
-            c.execute("DELETE FROM jobs WHERE user = ? AND url = ?;", (job.user, job.url))
+            c.execute("DELETE FROM jobs WHERE user = ? AND url = ?;", (user, url))
 
     def add_link(self, url: str, link: Link):
         """

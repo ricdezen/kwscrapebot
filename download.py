@@ -1,4 +1,4 @@
-from requests_html import HTMLSession
+import utils
 
 
 class Downloader(object):
@@ -24,7 +24,7 @@ class JavascriptDownloader(Downloader):
         :param target: The target. e.g. the web page URL.
         :return: The content.
         """
-        session = HTMLSession()
+        session = utils.html_session
         response = session.get(target)
         response.html.render()
         return response.html.html

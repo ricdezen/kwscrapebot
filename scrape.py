@@ -13,7 +13,7 @@ class Parser(object):
         raise NotImplementedError()
 
 
-@dataclass(repr=True)
+@dataclass(repr=True, eq=True, frozen=True)
 class Link(object):
     href: str
     text: str
@@ -36,15 +36,16 @@ class LinkKeywordParser(Parser):
     def parse(self, content: str) -> List[Link]:
         """
         :param content: Content of the web page to parse.
-        :return: A list of links.
+        :return: A list of links. Excludes any link with href equal to '#'.
         """
         # Get the links from the page.
         soup = BeautifulSoup(content, "html.parser")
-        links = [Link(t.get("href"), t.get_text()) for t in soup("a")]
+        links = [Link(t.get("href"), t.get_text().strip()) for t in soup("a")]
+        links = filter(lambda link: link.href != '#', links)
 
         # If no keywords, all links automatically match.
         if self.keywords is None:
-            return links
+            return list(links)
 
         # Otherwise, return only the ones containing the keywords.
         return list(filter(self._matches, links))

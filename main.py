@@ -18,10 +18,7 @@ DB_FILE = config["database_file"]
 def main():
     Database.prepare_db(DB_FILE)
     bot = Bot(TOKEN, DB_FILE)
-    bot.start()
-
-    while True:
-        time.sleep(1)
+    bot.idle()
 
 
 if __name__ == '__main__':

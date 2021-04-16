@@ -1,14 +1,14 @@
 import json
 import re
 import urllib.parse
+import selenium.webdriver.firefox.webdriver
 from typing import Union, Dict, List
 from pathlib import Path
-from requests_html import HTMLSession
+from selenium import webdriver
+from selenium.webdriver.firefox.options import Options
+from telegram.constants import MAX_MESSAGE_LENGTH
 
 from scrape import Link
-
-html_session = HTMLSession()
-_ = html_session.browser
 
 
 def get_config(file: Union[str, Path]) -> Dict:
@@ -56,3 +56,34 @@ def to_abs_urls(url, links: List[Link]) -> List[Link]:
     :return: A list of absolute links.
     """
     return [Link(urllib.parse.urljoin(url, link.href), link.text) for link in links]
+
+
+def get_firefox() -> selenium.webdriver.firefox.webdriver.WebDriver:
+    options = Options()
+    options.headless = True
+    return webdriver.Firefox(options=options)
+
+
+def split_links(links: List[Link]) -> List[str]:
+    """
+    :param links: The links to build messages for. List must not be empty.
+    :return: The message, split in multiple parts to avoid breaching max Telegram message size.
+    """
+    sep = "\n---\n"
+    result = list()
+    msg = f"{links[0].text}\n{links[0].href}"
+
+    # For each link.
+    for link in links[1::]:
+        entry = sep + f"{link.text}\n{link.href}"
+        # If too long, break current message.
+        if len(msg) + len(entry) > MAX_MESSAGE_LENGTH:
+            result.append(msg)
+            msg = f"{link.text}\n{link.href}"
+        # Otherwise, append to current message.
+        else:
+            msg += entry
+    # Last message.
+    result.append(msg)
+
+    return result

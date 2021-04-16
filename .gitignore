@@ -1,2 +1,12 @@
+# PyCharm dir.
+.idea/*
+
+# Config file, private.
 config.json
+
+# Other generated files.
 *.db
+*.log
+
+# Firefox driver.
+geckodriver.exe

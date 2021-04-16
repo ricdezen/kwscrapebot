@@ -26,15 +26,16 @@ def make_job_callback(job: Job, database_file: str) -> Callable:
 
             # Find which links are the new ones.
             old_links = set(db.get_links(url))
-            new_links = old_links.difference(set(links))
+            # No old links -> All found links are new.
+            new_links = old_links.difference(set(links)) if old_links else links
 
             # Send a notification to the user if there was anything new.
             if new_links:
-                text = "\n---\n".join([f"{link.text}\n{link.href}" for link in new_links])
-
                 # If the bot has been somehow blocked or removed from chat, never run this job again.
                 try:
-                    context.bot.send_message(chat_id=user, text=text)
+                    messages = utils.split_links(new_links)
+                    for m in messages:
+                        context.bot.send_message(chat_id=user, text=m)
                 except telegram.error.Unauthorized:
                     logging.warning(f"Cannot send message to user {user}. Removing job for url {url}.")
                     db.delete_job(user, url)

@@ -24,7 +24,8 @@ class JavascriptDownloader(Downloader):
         :param target: The target. e.g. the web page URL.
         :return: The content.
         """
-        session = utils.html_session
-        response = session.get(target)
-        response.html.render()
-        return response.html.html
+        browser = utils.get_firefox()
+        browser.get(target)
+        content = browser.page_source
+        browser.close()
+        return content

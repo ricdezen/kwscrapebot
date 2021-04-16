@@ -1,4 +1,3 @@
-import time
 import logging
 from bot import Bot
 from database import Database

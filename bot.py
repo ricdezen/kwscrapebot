@@ -135,7 +135,7 @@ Remove a job.
                 update.message.reply_text(f"{Bot.MIN_FREQ} minutes is the minimum time. I'll just set it for you.")
                 freq = Bot.MIN_FREQ
 
-            keywords = context.args[2::]
+            keywords = context.args[2::] if len(context.args) > 2 else list()
 
             # Update database.
             job = Job(user, url, freq, keywords)

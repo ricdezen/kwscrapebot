@@ -109,11 +109,11 @@ class Database(object):
         :return: A list of the jobs in the database.
         """
         if user is None:
-            return [Job(r[0], r[1], r[2], r[3].split()) for r in self._conn.execute("SELECT * FROM jobs;")]
+            return [Job(r[0], r[1], r[2], r[3].split() if r[3] else None)
+                    for r in self._conn.execute("SELECT * FROM jobs;")]
         else:
-            return [Job(r[0], r[1], r[2], r[3].split()) for r in self._conn.execute(
-                "SELECT * FROM jobs WHERE jobs.user = ?;", (user,)
-            )]
+            return [Job(r[0], r[1], r[2], r[3].split() if r[3] else None)
+                    for r in self._conn.execute("SELECT * FROM jobs WHERE jobs.user = ?;", (user,))]
 
     def delete_job(self, user: int, url: str):
         """

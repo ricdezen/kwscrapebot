@@ -50,15 +50,17 @@ def make_job_callback(job: Job, database_file: str) -> Callable:
 
 
 class Bot(object):
+    MIN_FREQ = 15
+
     START_MESSAGE = "Hello, I am a bot, nice to meet you. You may use /help to read what my commands do."
-    ADD_USAGE = "/add <url> <h> <keyword 1> <keyword 2> ..."
+    ADD_USAGE = "/add <url> <m> <keyword 1> <keyword 2> ..."
     LIST_USAGE = "/list"
     REMOVE_USAGE = "/remove <url>"
 
     # Help message.
     HELP_MESSAGE = f"""*KeywordScrapeBot*:\n
 {ADD_USAGE}
-Add a job that runs every h hours, scanning the url for links containing the keywords.
+Add a job that runs every m minutes (minimum 15), scanning the url for links containing the keywords.
 Running the command again for the same url will overwrite the job.\n
 {LIST_USAGE}
 List your running jobs.\n
@@ -127,7 +129,12 @@ Remove a job.
                 logging.warning(f"Invalid url from user {user}.")
                 return
 
+            # Check minimum time
             freq = int(context.args[1])
+            if freq < Bot.MIN_FREQ:
+                update.message.reply_text(f"{Bot.MIN_FREQ} minutes is the minimum time. I'll just set it for you.")
+                freq = Bot.MIN_FREQ
+
             keywords = context.args[2::]
 
             # Update database.
@@ -138,7 +145,7 @@ Remove a job.
             self._schedule(job)
 
             # Send back a response as a confirmation.
-            response = f"Will start searching {url} for links containing {', '.join(keywords)} every {freq} hours."
+            response = f"Will start searching {url} for links containing {', '.join(keywords)} every {freq} minutes."
             update.message.reply_text(response)
             logging.info(f"/add command received by user: {user}. {response}")
 
@@ -212,7 +219,7 @@ Remove a job.
 
         # Set job to run every x hours and keep track to cancel it later.
         self._job_map[(job.user, job.url)] = self._job_queue.run_repeating(
-            make_job_callback(job, self._database_file), 3600 * job.freq, 1
+            make_job_callback(job, self._database_file), 60 * job.freq, 1
         )
         logging.info(f"Started job on url {job.url} for user {job.user}.")
 

@@ -44,10 +44,21 @@ def make_job_callback(job: Job, database_file: str) -> Callable:
 
 
 class Bot(object):
-    START_MESSAGE = "Hello, I am a bot, nice to meet you."
-    SET_USAGE = "/set <url> <frequency in hours> <keyword 1> <keyword 2> ..."
+    START_MESSAGE = "Hello, I am a bot, nice to meet you. You may use /help to read what my commands do."
+    ADD_USAGE = "/add <url> <h> <keyword 1> <keyword 2> ..."
     LIST_USAGE = "/list"
     REMOVE_USAGE = "/remove <url>"
+
+    # Help message.
+    HELP_MESSAGE = f"""*KeywordScrapeBot*:\n
+{ADD_USAGE}
+Add a job that runs every h hours, scanning the url for links containing the keywords.
+Running the command again for the same url will overwrite the job.\n
+{LIST_USAGE}
+List your running jobs.\n
+{REMOVE_USAGE}
+Remove a job.
+    """
 
     def __init__(self, token: str, database_file: Union[str, Path]):
         """
@@ -59,8 +70,9 @@ class Bot(object):
         self._updater = Updater(token=token, use_context=True)
         self._updater.dispatcher.add_handler(CommandHandler("start", self._add_user))
         self._updater.dispatcher.add_handler(CommandHandler("list", self._list_jobs))
-        self._updater.dispatcher.add_handler(CommandHandler("set", self._add_job))
+        self._updater.dispatcher.add_handler(CommandHandler("add", self._add_job))
         self._updater.dispatcher.add_handler(CommandHandler("remove", self._remove_job))
+        self._updater.dispatcher.add_handler(CommandHandler("help", self._send_help))
 
         self._job_queue = JobQueue()
         self._job_queue.set_dispatcher(self._updater.dispatcher)
@@ -92,10 +104,10 @@ class Bot(object):
         logging.info(f"/start command received by user: {user}.")
 
     def _add_job(self, update: telegram.Update, context: telegram.ext.CallbackContext):
-        """
+        f"""
         Callback for the update of a job. Message must be:
         ```
-        /set <url> <frequency in hours> <keyword 1> <keyword 2> ...
+        {Bot.ADD_USAGE}
         ```
         """
         user = update.effective_chat.id
@@ -122,11 +134,11 @@ class Bot(object):
             # Send back a response as a confirmation.
             response = f"Will start searching {url} for links containing {', '.join(keywords)} every {freq} hours."
             update.message.reply_text(response)
-            logging.info(f"/set command received by user: {user}. {response}")
+            logging.info(f"/add command received by user: {user}. {response}")
 
         except (IndexError, ValueError):
-            update.message.reply_text(f"Usage: {Bot.SET_USAGE}")
-            logging.warning(f"Inappropriate /set command from user {user}.")
+            update.message.reply_text(f"Usage: {Bot.ADD_USAGE}")
+            logging.warning(f"Inappropriate /add command from user {user}.")
 
     def _list_jobs(self, update: telegram.Update, context: telegram.ext.CallbackContext):
         """
@@ -144,10 +156,10 @@ class Bot(object):
         logging.info(f"Sent job list to {user}.")
 
     def _remove_job(self, update: telegram.Update, context: telegram.ext.CallbackContext):
-        """
+        f"""
         Callback for the removal of a job. Message must be:
         ```
-        /remove <url>
+        {Bot.REMOVE_USAGE}
         ```
         """
         user = update.effective_chat.id
@@ -174,6 +186,15 @@ class Bot(object):
             update.message.reply_text(f"Usage: {Bot.REMOVE_USAGE}")
             logging.warning(f"Inappropriate /remove command from user {user}.")
 
+    def _send_help(self, update: telegram.Update, context: telegram.ext.CallbackContext):
+        """
+        Send help message.
+        """
+        user = update.effective_chat.id
+        # Answer user.
+        context.bot.send_message(chat_id=user, text=self.HELP_MESSAGE, parse_mode="markdown")
+        logging.info(f"Sent help to user: {user}.")
+
     def _schedule(self, job: Job):
         """
         Schedule a new job for the bot. Tries to remove any previous job for the same key (user, url)
@@ -185,8 +206,7 @@ class Bot(object):
 
         # Set job to run every x hours and keep track to cancel it later.
         self._job_map[(job.user, job.url)] = self._job_queue.run_repeating(
-            # TODO change from minutes to hours.
-            make_job_callback(job, self._database_file), 60 * job.freq, 1
+            make_job_callback(job, self._database_file), 3600 * job.freq, 1
         )
         logging.info(f"Started job on url {job.url} for user {job.user}.")
 

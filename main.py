@@ -18,6 +18,7 @@ DB_FILE = config["database_file"]
 def main():
     Database.prepare_db(DB_FILE)
     bot = Bot(TOKEN, DB_FILE)
+    bot.start()
     bot.idle()
 
 

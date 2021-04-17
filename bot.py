@@ -35,7 +35,7 @@ def make_job_callback(job: Job, database_file: str) -> Callable:
                 try:
                     messages = utils.split_links(new_links)
                     for m in messages:
-                        context.bot.send_message(chat_id=user, text=m)
+                        context.bot.send_message(chat_id=user, text=m, disable_web_page_preview=True)
                 except telegram.error.Unauthorized:
                     logging.warning(f"Cannot send message to user {user}. Removing job for url {url}.")
                     db.delete_job(user, url)
@@ -44,6 +44,8 @@ def make_job_callback(job: Job, database_file: str) -> Callable:
                 db.reset_links(url)
                 # Keep only links that were found this time.
                 db.add_links(url, links)
+
+                logging.info(f"Sent {len(new_links)} links to user {user}.")
         else:
             logging.info(f"No links found on url {url} for user {user} :(")
 
@@ -126,7 +128,7 @@ Remove a job.
 
             # Check url validity.
             if not utils.is_valid_url(url):
-                update.message.reply_text(f"{url} is not a valid url.")
+                update.message.reply_text(f"{url} is not a valid url.", disable_web_page_preview=True)
                 logging.warning(f"Invalid url from user {user}.")
                 return
 
@@ -147,7 +149,7 @@ Remove a job.
 
             # Send back a response as a confirmation.
             response = f"Will start searching {url} for links containing {', '.join(keywords)} every {freq} minutes."
-            update.message.reply_text(response)
+            update.message.reply_text(response, disable_web_page_preview=True)
             logging.info(f"/add command received by user: {user}. {response}")
 
         except (IndexError, ValueError):
@@ -163,7 +165,8 @@ Remove a job.
         if jobs:
             update.message.reply_markdown(
                 "\n---\n".join([f"*JOB {i + 1}*\nurl: {j.url}\nkeywords: {j.keywords}\nEvery {j.freq} hours."
-                                for i, j in enumerate(jobs)])
+                                for i, j in enumerate(jobs)]),
+                disable_web_page_preview=True
             )
         else:
             update.message.reply_text(f"No jobs scheduled.")
@@ -184,7 +187,7 @@ Remove a job.
 
             # Job not in database.
             if url not in [j.url for j in jobs]:
-                update.message.reply_text(f"You have no job for url: {url}")
+                update.message.reply_text(f"You have no job for url: {url}", disable_web_page_preview=True)
                 logging.info(f"User {user} asked for removal of non-existing job {url}")
                 return
 
@@ -193,7 +196,7 @@ Remove a job.
             self._unschedule(user, url)
 
             # Send back a response.
-            update.message.reply_text(f"You will receive no more updates from: {url}")
+            update.message.reply_text(f"You will receive no more updates from: {url}", disable_web_page_preview=True)
             logging.info(f"Removed job {url} for user {user}.")
 
         except IndexError:

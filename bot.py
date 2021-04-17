@@ -26,8 +26,8 @@ def make_job_callback(job: Job, database_file: str) -> Callable:
 
             # Find which links are the new ones.
             old_links = set(db.get_links(url))
-            # No old links -> All found links are new.
-            new_links = old_links.difference(set(links)) if old_links else links
+            # New links: remove old links.
+            new_links = list(set(links) - old_links)
 
             # Send a notification to the user if there was anything new.
             if new_links:

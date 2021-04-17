@@ -8,6 +8,13 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO
 )
+try:
+    # Try to add a lil colors.
+    import coloredlogs
+
+    coloredlogs.install(level='INFO')
+except ImportError:
+    logging.info("No colored logs :(")
 
 config = utils.get_config("config.json")
 TOKEN = config["bot_token"]

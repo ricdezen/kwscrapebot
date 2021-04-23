@@ -53,7 +53,6 @@ def make_job_callback(job: Job, database_file: str) -> Callable:
 
 
 class Bot(object):
-    MIN_FREQ = 15
 
     START_MESSAGE = "Hello, I am a bot, nice to meet you. You may use /help to read what my commands do."
     ADD_USAGE = "/add <url> <m> <keyword 1> <keyword 2> ..."
@@ -71,14 +70,15 @@ List your running jobs.\n
 Remove a job.
     """
 
-    def __init__(self, token: str, database_file: Union[str, Path]):
+    def __init__(self, bot_token: str, database_file: Union[str, Path], minimum_interval: int = 15):
         """
-        :param token: The token to run the bot on.
+        :param bot_token: The token to run the bot on.
         :param database_file: The database file.
         """
         self._database_file = database_file
+        self._minimum_interval = minimum_interval
 
-        self._updater = Updater(token=token, use_context=True)
+        self._updater = Updater(token=bot_token, use_context=True)
         self._updater.dispatcher.add_handler(CommandHandler("start", self._add_user))
         self._updater.dispatcher.add_handler(CommandHandler("list", self._list_jobs))
         self._updater.dispatcher.add_handler(CommandHandler("add", self._add_job))
@@ -134,9 +134,11 @@ Remove a job.
 
             # Check minimum time
             freq = int(context.args[1])
-            if freq < Bot.MIN_FREQ:
-                update.message.reply_text(f"{Bot.MIN_FREQ} minutes is the minimum time. I'll just set it for you.")
-                freq = Bot.MIN_FREQ
+            if freq < self._minimum_interval:
+                update.message.reply_text(
+                    f"{self._minimum_interval} minutes is the minimum time. I'll just set it for you."
+                )
+                freq = self._minimum_interval
 
             keywords = context.args[2::] if len(context.args) > 2 else list()
 

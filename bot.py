@@ -74,6 +74,7 @@ Remove a job.
         """
         :param bot_token: The token to run the bot on.
         :param database_file: The database file.
+        :param minimum_interval: The minimum update interval in minutes. Defaults to 15.
         """
         self._database_file = database_file
         self._minimum_interval = minimum_interval

@@ -42,7 +42,8 @@ Add a configuration file `config.json` in your working directory:
 ```json
 {
   "bot_token": "your bot token, see: https://core.telegram.org/bots",
-  "database_file": "whateveryouwant.db"
+  "database_file": "whateveryouwant.db",
+  "minimum_interval": 5 // Optional
 }
 ```
 
